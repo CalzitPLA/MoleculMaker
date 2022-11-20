@@ -1,14 +1,7 @@
-"""Sample code.
-
-This code was written as an sample code
-
-Name: 20221115-molecule.py
-
-Author: Carlo Dormeletti
-Copyright: 2022
-Licence: CC BY-NC-ND 4.0 IT
 """
-
+Name: MoleculeMaker.py
+Author: nemo
+"""
 
 import math
 import FreeCAD
@@ -42,9 +35,9 @@ VIEW = GUI.ActiveView
 
 # path and name of sphere file
 
-pfad = "aspirin.asc"
+pfad = "/home/nemo/Dokumente/Privat/Fredo/aspirin.sphere.asc"
 # path and name of links file
-pfad1 = "aspirin-links.asc"
+pfad1 = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
 
 # Example: sphere file  - It is more easy to copy and paste this way.
 
@@ -131,75 +124,150 @@ A1 = 0.0
 A2 = 0.0
 No = 0.0
 for ligne in file:
-    coordinates = ligne.split()
-    A1, A2, No = coordinates  # separate the coordinates
-    A1 = int(A1) - 1
-    A2 = int(A2) - 1
+	coordinates = ligne.split()
+	A1, A2, No = coordinates  # separate the coordinates
+	A1 = int(A1) - 1
+	A2 = int(A2) - 1
 
-    if float(No) > 1:
-        # print("2")
-        X1 = matrix1[int(A1)][0] - matrix1[int(A1)][3]
-        print(X1, matrix1[int(A1)][0], matrix1[int(A1)][3])
-        Y1 = matrix1[int(A1)][1]
-        Z1 = matrix1[int(A1)][2]
-        X2 = matrix1[int(A2)][0] - matrix1[int(A2)][3]
-        Y2 = matrix1[int(A2)][1]
-        Z2 = matrix1[int(A2)][2]
-        print(X1, Y1, Z1, X2, Y2, Z2)
-        dx = X1 - X2
-        dy = Y1 - Y2
-        dz = Z1 - Z2
-        x = (float(dx) * 2 + float(dy) * 1) / (float(dz) * -1)
-        norm = math.sqrt((x * x) + 4 + 1)
-        print(f"x: {x} >> {norm}")
-        X1 = matrix1[int(A1)][0] - 2 / norm * matrix1[int(A1)][3]
-        Y1 = matrix1[int(A1)][1] - 1 / norm * matrix1[int(A1)][3]
-        Z1 = matrix1[int(A1)][2] - x / norm * matrix1[int(A1)][3]
-        X2 = matrix1[int(A2)][0] - 2 / norm * matrix1[int(A2)][3]
-        Y2 = matrix1[int(A2)][1] - 1 / norm * matrix1[int(A2)][3]
-        Z2 = matrix1[int(A2)][2] - x / norm * matrix1[int(A2)][3]
-
+# Up to 5 Bonds possible
+# This Macro will work until 3 Bonds
+# The rest you must do by hand :D
+	if float(No) < 2:
+		X1 = matrix1[int(A1)][0]
+		Y1 = matrix1[int(A1)][1]
+		Z1 = matrix1[int(A1)][2]
+		X2 = matrix1[int(A2)][0]
+		Y2 = matrix1[int(A2)][1]
+		Z2 = matrix1[int(A2)][2]
         # append the coordinates
-        pt1 = Vector(float(X1), float(Y1), float(Z1))
-        pt2 = Vector(float(X2), float(Y2), float(Z2))
-        c_length = pt1.distanceToPoint(pt2)
-        c_axis = pt2.sub(pt1)
-        # tube 0.2 diam
-        t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-        Part.show(t1, "tube_2")
-
-        X1 = matrix1[int(A1)][0] + 2 / norm * matrix1[int(A1)][3]
-        Y1 = matrix1[int(A1)][1] + 1 / norm * matrix1[int(A1)][3]
-        Z1 = matrix1[int(A1)][2] + x / norm * matrix1[int(A1)][3]
-        X2 = matrix1[int(A2)][0] + 2 / norm * matrix1[int(A2)][3]
-        Y2 = matrix1[int(A2)][1] + 1 / norm * matrix1[int(A2)][3]
-        Z2 = matrix1[int(A2)][2] + x / norm * matrix1[int(A2)][3]
-        # append the coordinates
-        pt1 = Vector(float(X1), float(Y1), float(Z1))
-        pt2 = Vector(float(X2), float(Y2), float(Z2))
-        c_length = pt1.distanceToPoint(pt2)
-        c_axis = pt2.sub(pt1)
-        # tube 0.2 diam
-        t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-        Part.show(t1, "tube_2")
-
-        DOC.recompute()
-    else:
-        # print("A")
-        X1 = matrix1[int(A1)][0]
-        Y1 = matrix1[int(A1)][1]
-        Z1 = matrix1[int(A1)][2]
-        X2 = matrix1[int(A2)][0]
-        Y2 = matrix1[int(A2)][1]
-        Z2 = matrix1[int(A2)][2]
-        # append the coordinates
-        pt1 = Vector(float(X1), float(Y1), float(Z1))
-        pt2 = Vector(float(X2), float(Y2), float(Z2))
-        c_length = pt1.distanceToPoint(pt2)
-        c_axis = pt2.sub(pt1)
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))	
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
         # tube 0.3 diam
-        t1 = Part.makeCylinder(0.15, c_length, pt1, c_axis)
-        Part.show(t1, "tube_A")
+		t1 = Part.makeCylinder(0.15, c_length, pt1, c_axis)
+		Part.show(t1, "tube_A")
+	elif float(No) < 3:
+        # print("2")
+		X1 = matrix1[int(A1)][0] - matrix1[int(A1)][3]
+		print(X1, matrix1[int(A1)][0], matrix1[int(A1)][3])
+		Y1 = matrix1[int(A1)][1]
+		Z1 = matrix1[int(A1)][2]
+		X2 = matrix1[int(A2)][0] - matrix1[int(A2)][3]
+		Y2 = matrix1[int(A2)][1]
+		Z2 = matrix1[int(A2)][2]
+		print(X1, Y1, Z1, X2, Y2, Z2)
+		dx = X1 - X2
+		dy = Y1 - Y2
+		dz = Z1 - Z2
+		x = (float(dx) * 2 + float(dy) * 1) / (float(dz) * -1)
+		norm = math.sqrt((x * x) + 4 + 1)
+		print(f"x: {x} >> {norm}")
+		#Calculate Start and Endpoint of the shifted bond
+		X1 = matrix1[int(A1)][0] - 2 / norm * ((matrix1[int(A1)][3] * 2) -0.1)  # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y1 = matrix1[int(A1)][1] - 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z1 = matrix1[int(A1)][2] - x / norm * ((matrix1[int(A1)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		X2 = matrix1[int(A2)][0] - 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y2 = matrix1[int(A2)][1] - 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z2 = matrix1[int(A2)][2] - x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+
+        # append the coordinates
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
+        # tube 0.2 diam
+		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
+		Part.show(t1, "tube_2")
+		#Calculate Start and Endpoint of the shifted bond
+		X1 = matrix1[int(A1)][0] + 2 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (((Value of Vector) * (Van der Waals Radius))-(bond diameter)) 
+		Y1 = matrix1[int(A1)][1] + 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z1 = matrix1[int(A1)][2] + x / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		X2 = matrix1[int(A2)][0] + 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y2 = matrix1[int(A2)][1] + 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z2 = matrix1[int(A2)][2] + x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		# append the coordinates
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
+		# tube 0.2 diam
+		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
+		Part.show(t1, "tube_2")
+
+		DOC.recompute()
+
+	else:
+
+#https://www.chemie.de/lexikon/Dreifachbindung.html
+#Aus quantenchemischer Sicht kommen Bindungen durch Überlappung von Atomorbitalen zu einem Molekülorbital zustande.
+#Die geläufigste Beschreibung der Dreifachbindung in Alkinen ist über eine Sigma-Bindung aus sp-Hybridorbitalen, die zwischen der Kernverbindungsachse liegt 
+#und zwei Pi-Bindungen, die untereinander einen Winkel von 90° bilden
+#und beide außerhalb der Kernverbindungsachse liegen. Eine alternative, vollkommen äquivalente Beschreibung benutzt drei gleichwertige "Bananen"-Bindungen,
+#die durch Überlappung von sp3-Hybridorbitalen gebildet werden
+#https://de.wikipedia.org/wiki/Drehmatrix
+
+#The Rotation around ndach is the next step of implementation
+        # print("A")
+		X1 = matrix1[int(A1)][0]
+		Y1 = matrix1[int(A1)][1]
+		Z1 = matrix1[int(A1)][2]
+		X2 = matrix1[int(A2)][0]
+		Y2 = matrix1[int(A2)][1]
+		Z2 = matrix1[int(A2)][2]
+        # append the coordinates
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
+        # tube 0.3 diam
+		t1 = Part.makeCylinder(0.15, c_length, pt1, c_axis)
+		Part.show(t1, "tube_A")
+		X1 = matrix1[int(A1)][0] - matrix1[int(A1)][3]
+		print(X1, matrix1[int(A1)][0], matrix1[int(A1)][3])
+		Y1 = matrix1[int(A1)][1]
+		Z1 = matrix1[int(A1)][2]
+		X2 = matrix1[int(A2)][0] - matrix1[int(A2)][3]
+		Y2 = matrix1[int(A2)][1]
+		Z2 = matrix1[int(A2)][2]
+		print(X1, Y1, Z1, X2, Y2, Z2)
+		dx = X1 - X2
+		dy = Y1 - Y2
+		dz = Z1 - Z2
+		x = (float(dx) * 2 + float(dy) * 1) / (float(dz) * -1)
+		norm = math.sqrt((x * x) + 4 + 1)
+		print(f"x: {x} >> {norm}")
+		#Calculate Start and Endpoint of the shifted bond
+		X1 = matrix1[int(A1)][0] - 2 / norm * ((matrix1[int(A1)][3] * 2) -0.1)  # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y1 = matrix1[int(A1)][1] - 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z1 = matrix1[int(A1)][2] - x / norm * ((matrix1[int(A1)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		X2 = matrix1[int(A2)][0] - 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y2 = matrix1[int(A2)][1] - 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z2 = matrix1[int(A2)][2] - x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+
+        # append the coordinates
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
+        # tube 0.2 diam
+		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
+		Part.show(t1, "tube_2")
+		#Calculate Start and Endpoint of the shifted bond
+		X1 = matrix1[int(A1)][0] + 2 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (((Value of Vector) * (Van der Waals Radius))-(bond diameter)) 
+		Y1 = matrix1[int(A1)][1] + 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z1 = matrix1[int(A1)][2] + x / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		X2 = matrix1[int(A2)][0] + 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Y2 = matrix1[int(A2)][1] + 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		Z2 = matrix1[int(A2)][2] + x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
+		# append the coordinates
+		pt1 = Vector(float(X1), float(Y1), float(Z1))
+		pt2 = Vector(float(X2), float(Y2), float(Z2))
+		c_length = pt1.distanceToPoint(pt2)
+		c_axis = pt2.sub(pt1)
+		# tube 0.2 diam
+		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
+		Part.show(t1, "tube_3")
 
 file.close()
 
