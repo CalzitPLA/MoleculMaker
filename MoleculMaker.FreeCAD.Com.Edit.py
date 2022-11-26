@@ -1,43 +1,11 @@
-"""
-Name: MoleculeMaker.py
-Author: nemo
-"""
+import FreeCAD as App
+from FreeCAD import Vector as V3
+import Part, math
 
-import math
-import FreeCAD
-from FreeCAD import Placement, Rotation, Vector
-import FreeCADGui
-import Part
-
-DOC_NAME = "test_molecule"
-
-if FreeCAD.ActiveDocument is None:
-    FreeCAD.newDocument(DOC_NAME)
-    print(f"Document: {DOC_NAME}")
-
-# test if there is an active document with a "proper" name
-if FreeCAD.ActiveDocument.Name == DOC_NAME:
-    print("DOC_NAME exist")
-else:
-    print("DOC_NAME is not active")
-    # test if there is a document with a "proper" name
-    try:
-        FreeCAD.getDocument(DOC_NAME)
-    except NameError:
-        print(f"No Document: {DOC_NAME}")
-        FreeCAD.newDocument(DOC_NAME)
-        print(f"Document Created: {DOC_NAME}")
-
-DOC = FreeCAD.getDocument(DOC_NAME)
-GUI = FreeCADGui.getDocument(DOC_NAME)
-VIEW = GUI.ActiveView
-
-
-# path and name of sphere file
-
-pfad = "/home/nemo/Dokumente/Privat/Fredo/aspirin.sphere.asc"
 # path and name of links file
-pfad1 = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
+atomfile = "/home/nemo/Dokumente/Privat/Fredo/aspirin.sphere.asc"
+# path and name of links file
+linkfile = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
 
 # Example: sphere file  - It is more easy to copy and paste this way.
 
@@ -64,10 +32,10 @@ pfad1 = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
 4.2045    0.6969   -0.6924 0.12
 3.7105   -0.3659    0.6426 0.12
 -0.2555   -3.5916   -0.7337 0.12
-"""
+
 
 # Example: Link file
-"""
+
 1  5  1
 1 12  1
 2 11  1
@@ -91,185 +59,167 @@ pfad1 = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
 13 20  1
 """
 
-file = open(pfad, "r")  # open the file read
-matrix1 = []
-i = 1
-X1 = 0.0
-Y1 = 0.0
-Z1 = 0.0
-pe = 0.0
 
-for ligne in file:
-    coordinates = ligne.split()
-    # print(coordinates)
-    X1, Y1, Z1, pe = coordinates  # separate the coordinates
-    # append the coordinates
-    matrix1.append((float(X1), float(Y1), float(Z1), float(pe)))
-    # print(X1," ",Y1," ",Z1,"",pe)
-    pe = float(pe) * 2.0
-    sphere = DOC.addObject("Part::Sphere", "Sphere")
-    sphere.Label = "Kugel"
-    sphere.Radius = pe
-    sphere.Placement = Placement(
-        Vector(float(X1), float(Y1), float(Z1)),
-        Rotation(Vector(0.0, 0.0, 1.0), 0.0))
+def curvedCylinder(radius, height, offset):
+    circ = Part.makeCircle(radius)
+    circtop = circ.copy()
+    circtop.translate(V3(0, 0, height))
+    sections = [Part.Wire(circ), Part.Wire(circtop)]
+    pmid = V3(offset, 0, height/2)
+    arc = Part.ArcOfCircle(zeroVec, pmid, V3(0, 0, height)) #Part.Arc deprecated
+    spine = Part.Wire([arc.toShape()])
+    curvedCyl = spine.makePipeShell(sections, True, True)
+    return curvedCyl
 
+
+def doubleBond(p1, p2, radius, offsetDist, planeNormal = V3(0, 0, 1)):
+    #make a vertical cylinder at origin of length |p2 - p1|
+    circ = Part.makeCircle(radius)
+    cyl1 = Part.Face(Part.Wire(circ)).extrude(V3(0, 0, (p2 - p1).Length))
+    cyl2 = cyl1.copy()
+    pl = App.Placement()
+    pl.Base = p1 
+    pl.Rotation = App.Rotation(V3(0,0,1), p2 - p1)
+    offsetVector = offsetDist*(planeNormal.cross(p2 - p1)).normalize()
+    cyl1.Placement = pl
+    cyl2.Placement = pl
+    cyl1.Placement.Base += 0.5 * offsetVector
+    cyl2.Placement.Base -= 0.5 * offsetVector
+    dbond = cyl1.fuse(cyl2)
+    return dbond
+
+def tripleBond(p1, p2, radius, offsetDist, planeNormal = V3(0, 0, 1), planeQ = V3(0, 1, 0),):
+    circ = Part.makeCircle(radius)
+    cyl1 = Part.Face(Part.Wire(circ)).extrude(V3(0, 0, (p2 - p1).Length))
+    cyl2 = cyl1.copy()
+    cyl3 = cyl1.copy()
+    pl = App.Placement()
+    pl.Base = p1 
+    pl.Rotation = App.Rotation(V3(0,0,1), p2 - p1)
+    offsetVector = offsetDist*(planeNormal.cross(p2 - p1)).normalize()
+    QVector = offsetDist*(planeQ.cross(p2 - p1)).normalize()
+    cyl1.Placement = pl
+    cyl2.Placement = pl
+    cyl3.Placement = pl
+    cyl2.Placement.Base += 0.5 * offsetVector
+    cyl3.Placement.Base -= 0.5 * QVector
+    tbond = cyl1.fuse([cyl2, cyl3])
+    return tbond
+
+
+
+def doubleBondCurved(p1, p2, radius, offsetDist, planeNormal = V3(0, 0, 1)):
+    height = (p2 - p1).Length
+    cc1 = curvedCylinder(radius, height, offsetDist/2)
+    cc2 = curvedCylinder(radius, height, -offsetDist/2)
+    pl = App.Placement()
+    pl.Base = p1 
+    pl.Rotation = App.Rotation(planeNormal.cross(p2-p1), zeroVec, p2 - p1, 'ZXY')
+    cc1.Placement = pl
+    cc2.Placement = pl
+    return cc1.fuse(cc2)
+
+def tripleBondCurved(p1, p2, radius, offsetDist, planeNormal = V3(0, 0, 1), planeQ = V3(0, 1, 0)):
+    height = (p2 - p1).Length
+    cc1 = curvedCylinder(radius, height, offsetDist/2)
+    cc2 = curvedCylinder(radius, height, -offsetDist/2)
+    cc3 = curvedCylinder(radius, height, -offsetDist/2)
+    pl = App.Placement()
+    pl.Base = p1
+    QVector = offsetDist*(planeQ.cross(p2 - p1)).normalize() 
+    pl.Rotation = App.Rotation(planeNormal.cross(p2-p1), zeroVec, p2 - p1, 'XYZ')
+    cc1.Placement = pl
+    cc2.Placement = pl
+    planeNormal=planeQ
+    pl.Rotation = App.Rotation(planeNormal.cross(p2-p1), zeroVec, p2 - p1, 'XYZ')
+    pl.Base = p1    
+    cc3.Placement = pl
+    return cc1.fuse([cc2,cc3])
+
+
+
+bondRadius = 0.05
+useCurved = True
+doc = App.ActiveDocument
+
+zeroVec = V3(0,0,0)
+atomlocs=[] # list of locations 1-based
+atomradii = [] # list of corresponding radii 1-based
+#0 index is dummy data
+atomlocs.append(zeroVec)
+atomradii.append(0.0)
+
+file = open(atomfile, "r")  # open the file read
+for line in file:
+    X1, Y1, Z1, pe = line.split()
+    atomlocs.append(V3(float(X1), float(Y1), float(Z1)))
+    atomradii.append(float(pe))
 
 file.close()
 
+
+linkList = []
 # open the file read
-file = open(pfad1, "r")
-i = 1
-A1 = 0.0
-A2 = 0.0
-No = 0.0
-for ligne in file:
-	coordinates = ligne.split()
-	A1, A2, No = coordinates  # separate the coordinates
-	A1 = int(A1) - 1
-	A2 = int(A2) - 1
-
-# Up to 5 Bonds possible
-# This Macro will work until 3 Bonds
-# The rest you must do by hand :D
-	if float(No) < 2:
-		X1 = matrix1[int(A1)][0]
-		Y1 = matrix1[int(A1)][1]
-		Z1 = matrix1[int(A1)][2]
-		X2 = matrix1[int(A2)][0]
-		Y2 = matrix1[int(A2)][1]
-		Z2 = matrix1[int(A2)][2]
-        # append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))	
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-        # tube 0.3 diam
-		t1 = Part.makeCylinder(0.15, c_length, pt1, c_axis)
-		Part.show(t1, "tube_A")
-	elif float(No) < 3:
-        # print("2")
-		X1 = matrix1[int(A1)][0] - matrix1[int(A1)][3]
-		print(X1, matrix1[int(A1)][0], matrix1[int(A1)][3])
-		Y1 = matrix1[int(A1)][1]
-		Z1 = matrix1[int(A1)][2]
-		X2 = matrix1[int(A2)][0] - matrix1[int(A2)][3]
-		Y2 = matrix1[int(A2)][1]
-		Z2 = matrix1[int(A2)][2]
-		print(X1, Y1, Z1, X2, Y2, Z2)
-		dx = X1 - X2
-		dy = Y1 - Y2
-		dz = Z1 - Z2
-		x = (float(dx) * 2 + float(dy) * 1) / (float(dz) * -1)
-		norm = math.sqrt((x * x) + 4 + 1)
-		print(f"x: {x} >> {norm}")
-		#Calculate Start and Endpoint of the shifted bond
-		X1 = matrix1[int(A1)][0] - 2 / norm * ((matrix1[int(A1)][3] * 2) -0.1)  # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y1 = matrix1[int(A1)][1] - 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z1 = matrix1[int(A1)][2] - x / norm * ((matrix1[int(A1)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		X2 = matrix1[int(A2)][0] - 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y2 = matrix1[int(A2)][1] - 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z2 = matrix1[int(A2)][2] - x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-
-        # append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-        # tube 0.2 diam
-		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-		Part.show(t1, "tube_2")
-		#Calculate Start and Endpoint of the shifted bond
-		X1 = matrix1[int(A1)][0] + 2 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (((Value of Vector) * (Van der Waals Radius))-(bond diameter)) 
-		Y1 = matrix1[int(A1)][1] + 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z1 = matrix1[int(A1)][2] + x / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		X2 = matrix1[int(A2)][0] + 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y2 = matrix1[int(A2)][1] + 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z2 = matrix1[int(A2)][2] + x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		# append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-		# tube 0.2 diam
-		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-		Part.show(t1, "tube_2")
-
-		DOC.recompute()
-
-	else:
-
-#https://www.chemie.de/lexikon/Dreifachbindung.html
-#Aus quantenchemischer Sicht kommen Bindungen durch Überlappung von Atomorbitalen zu einem Molekülorbital zustande.
-#Die geläufigste Beschreibung der Dreifachbindung in Alkinen ist über eine Sigma-Bindung aus sp-Hybridorbitalen, die zwischen der Kernverbindungsachse liegt 
-#und zwei Pi-Bindungen, die untereinander einen Winkel von 90° bilden
-#und beide außerhalb der Kernverbindungsachse liegen. Eine alternative, vollkommen äquivalente Beschreibung benutzt drei gleichwertige "Bananen"-Bindungen,
-#die durch Überlappung von sp3-Hybridorbitalen gebildet werden
-#https://de.wikipedia.org/wiki/Drehmatrix
-
-#The Rotation around ndach is the next step of implementation
-        # print("A")
-		X1 = matrix1[int(A1)][0]
-		Y1 = matrix1[int(A1)][1]
-		Z1 = matrix1[int(A1)][2]
-		X2 = matrix1[int(A2)][0]
-		Y2 = matrix1[int(A2)][1]
-		Z2 = matrix1[int(A2)][2]
-        # append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-        # tube 0.3 diam
-		t1 = Part.makeCylinder(0.15, c_length, pt1, c_axis)
-		Part.show(t1, "tube_A")
-		X1 = matrix1[int(A1)][0] - matrix1[int(A1)][3]
-		print(X1, matrix1[int(A1)][0], matrix1[int(A1)][3])
-		Y1 = matrix1[int(A1)][1]
-		Z1 = matrix1[int(A1)][2]
-		X2 = matrix1[int(A2)][0] - matrix1[int(A2)][3]
-		Y2 = matrix1[int(A2)][1]
-		Z2 = matrix1[int(A2)][2]
-		print(X1, Y1, Z1, X2, Y2, Z2)
-		dx = X1 - X2
-		dy = Y1 - Y2
-		dz = Z1 - Z2
-		x = (float(dx) * 2 + float(dy) * 1) / (float(dz) * -1)
-		norm = math.sqrt((x * x) + 4 + 1)
-		print(f"x: {x} >> {norm}")
-		#Calculate Start and Endpoint of the shifted bond
-		X1 = matrix1[int(A1)][0] - 2 / norm * ((matrix1[int(A1)][3] * 2) -0.1)  # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y1 = matrix1[int(A1)][1] - 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z1 = matrix1[int(A1)][2] - x / norm * ((matrix1[int(A1)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		X2 = matrix1[int(A2)][0] - 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y2 = matrix1[int(A2)][1] - 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1)# (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z2 = matrix1[int(A2)][2] - x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-
-        # append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-        # tube 0.2 diam
-		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-		Part.show(t1, "tube_2")
-		#Calculate Start and Endpoint of the shifted bond
-		X1 = matrix1[int(A1)][0] + 2 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (((Value of Vector) * (Van der Waals Radius))-(bond diameter)) 
-		Y1 = matrix1[int(A1)][1] + 1 / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z1 = matrix1[int(A1)][2] + x / norm * ((matrix1[int(A1)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		X2 = matrix1[int(A2)][0] + 2 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Y2 = matrix1[int(A2)][1] + 1 / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		Z2 = matrix1[int(A2)][2] + x / norm * ((matrix1[int(A2)][3] * 2) - 0.1) # (Center Coordinate) - (guessed X-Vector)/ (Value of Vector) * (Van der Waals Radius)
-		# append the coordinates
-		pt1 = Vector(float(X1), float(Y1), float(Z1))
-		pt2 = Vector(float(X2), float(Y2), float(Z2))
-		c_length = pt1.distanceToPoint(pt2)
-		c_axis = pt2.sub(pt1)
-		# tube 0.2 diam
-		t1 = Part.makeCylinder(0.1, c_length, pt1, c_axis)
-		Part.show(t1, "tube_3")
+file = open(linkfile, "r")
+for line in file:
+    i1, i2, i3 = line.split()
+    linkList.append((int(i1), int(i2), int(i3)))
 
 file.close()
 
-DOC.recompute()
+atomCompound = doc.addObject("Part::Compound","Atoms")
+atomlinks = []
+for i, loc in enumerate(atomlocs):
+    if i == 0:
+        pass
+    else:
+        sph = doc.addObject("Part::Sphere","Sphere")
+        sph.Label = "Atom_" + str(i)
+        sph.Radius= atomradii[i]
+        pl = App.Placement()
+        pl.Base = loc
+        sph.Placement = pl
+        atomlinks.append(sph)
+        #junk = sph.adjustRelativeLinks(atomCompound) #suppress return value
+        #junk = atomCompound.ViewObject.dropObject(sph, None,'',[])
+    atomCompound.Links = atomlinks
+
+
+
+bondCompound = doc.addObject("Part::Compound","Bonds")
+bondlinks = []
+for i, j, bondType in linkList:
+    p1 = atomlocs[i]
+    p2 = atomlocs[j]
+    if bondType == 1:      
+        bond = doc.addObject("Part::Cylinder", "Bond"+str(i)+ ' '+str(j))
+        bond.Height = (p2 - p1).Length
+        bond.Radius = bondRadius
+        pl= App.Placement()
+        pl.Base = p1 
+        pl.Rotation = App.Rotation(V3(0,0,1), p2 - p1)
+        bond.Placement = pl
+        #junk = bond.adjustRelativeLinks(bondCompound)
+        #junk = bondCompound.ViewObject.dropObject(bond, None,'',[])
+        bondlinks.append(bond)
+    elif bondType == 2:
+        if useCurved:
+            dbond = doubleBondCurved(p1, p2, bondRadius * 0.5, bondRadius * 2) # need more info to determine plane
+        else:
+            dbond = doubleBond(p1, p2, bondRadius * 0.5, bondRadius * 2)
+        dbondobj = Part.show(dbond, 'DoubleBond' +str(i)+ ' '+str(j))
+        #junk = dbondobj.adjustRelativeLinks(bondCompound)
+        #junk = bondCompound.ViewObject.dropObject(dbondobj, None,'',[])
+        bondlinks.append(dbondobj)
+    elif bondType == 3:
+        tbond = tripleBondCurved(p1, p2, bondRadius * 0.5, bondRadius * 3)
+        tbondobj = Part.show(tbond, 'TripleBond' +str(i)+ ' '+str(j))
+        #junk = tbondobj.adjustRelativeLinks(bondCompound)
+        #junk = bondCompound.ViewObject.dropObject(tbondobj, None,'',[])
+        bondlinks.append(tbondobj)
+    bondCompound.Links = bondlinks
+
+
+doc.recompute()
+
 
