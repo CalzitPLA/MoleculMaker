@@ -1,63 +1,130 @@
-import FreeCAD as App
 from FreeCAD import Vector as V3
 import Part, math
+import FreeCADGui
+import PySide
+from PySide import QtCore, QtGui
+from PySide.QtGui import QLineEdit, QRadioButton
 
-# path and name of links file
-atomfile = "/home/nemo/Dokumente/Privat/Fredo/aspirin.sphere.asc"
-# path and name of links file
-linkfile = "/home/nemo/Dokumente/Privat/Fredo/aspirin.verbindung.asc"
-
-# Example: sphere file  - It is more easy to copy and paste this way.
-
-"""
-
-1.2333    0.5540    0.7792 0.152
--0.6952   -2.7148   -0.7502 0.152
-0.7958   -2.1843    0.8685 0.152
-1.7813    0.8105   -1.4821 0.152
--0.0857    0.6088    0.4403 0.17
--0.7927   -0.5515    0.1244 0.17
--0.7288    1.8464    0.4133 0.17
--2.1426   -0.4741   -0.2184 0.17
--2.0787    1.9238    0.0706 0.17
--2.7855    0.7636   -0.2453 0.17
--0.1409   -1.8536    0.1477 0.17
-2.1094    0.6715   -0.3113 0.17
-3.5305    0.5996    0.1635 0.17
--0.1851    2.7545    0.6593 0.12
--2.7247   -1.3605   -0.4564 0.12
--2.5797    2.8872    0.0506 0.12
--3.8374    0.8238   -0.5090 0.12
-3.7290    1.4184    0.8593 0.12
-4.2045    0.6969   -0.6924 0.12
-3.7105   -0.3659    0.6426 0.12
--0.2555   -3.5916   -0.7337 0.12
-
-
-# Example: Link file
-
-1  5  1
-1 12  1
-2 11  1
-2 21  1
-3 11  2
-4 12  2
-5  6  1
-5  7  2
-6  8  2
-6 11  1
-7  9  1
-7 14  1
-8 10  1
-8 15  1
-9 10  2
-9 16  1
-10 17  1
-12 13  1
-13 18  1
-13 19  1
-13 20  1
-"""
+periodic_table = {
+"H":"120",
+"He":"140",
+"Li":"182",
+"Be":"153",
+"B":"192",
+"C":"170",
+"N":"155",
+"O":"152",
+"F":"147",
+"Ne":"154",
+"Na":"227",
+"Mg":"173",
+"Al":"184",
+"Si":"210",
+"P":"180",
+"S":"180",
+"Cl":"175",
+"Ar":"188",
+"K":"275",
+"Ca":"231",
+"Sc":"211",
+"Ti":"-",
+"V":"-",
+"Cr":"-",
+"Mn":"-",
+"Fe":"-",
+"Co":"-",
+"Ni":"163",
+"Cu":"140",
+"Zn":"139",
+"Ga":"187",
+"Ge":"211",
+"As":"185",
+"Se":"190",
+"Br":"185",
+"Kr":"202",
+"Rb":"303",
+"Sr":"249",
+"Y":"-",
+"Zr":"-",
+"Nb":"-",
+"Mo":"-",
+"Tc":"-",
+"Ru":"-",
+"Rh":"-",
+"Pd":"163",
+"Ag":"172",
+"Cd":"158",
+"In":"193",
+"Sn":"217",
+"Sb":"206",
+"Te":"206",
+"I":"198",
+"Xe":"216",
+"Cs":"343",
+"Ba":"268",
+"La":"-",
+"Ce":"-",
+"Pr":"-",
+"Nd":"-",
+"Pm":"-",
+"Sm":"-",
+"Eu":"-",
+"Gd":"-",
+"Tb":"-",
+"Dy":"-",
+"Ho":"-",
+"Er":"-",
+"Tm":"-",
+"Yb":"-",
+"Lu":"-",
+"Hf":"-",
+"Ta":"-",
+"W":"-",
+"Re":"-",
+"Os":"-",
+"Ir":"-",
+"Pt":"175",
+"Au":"166",
+"Hg":"155",
+"Tl":"196",
+"Pb":"202",
+"Bi":"207",
+"Po":"197",
+"At":"202",
+"Rn":"220",
+"Fr":"348",
+"Ra":"283",
+"Ac":"-",
+"Th":"-",
+"Pa":"-",
+"U":"186",
+"Np":"-",
+"Pu":"-",
+"Am":"-",
+"Cm":"-",
+"Bk":"-",
+"Cf":"-",
+"Es":"-",
+"Fm":"-",
+"Md":"-",
+"No":"-",
+"Lr":"-",
+"Rf":"-",
+"Db":"-",
+"Sg":"-",
+"Bh":"-",
+"Hs":"-",
+"Mt":"-",
+"Ds":"-",
+"Rg":"-",
+"Cn":"-",
+"Nh":"-",
+"Fl":"-",
+"Mc":"-",
+"Lv":"-",
+"Ts":"-",
+"Og":"-"
+}
 
 
 def curvedCylinder(radius, height, offset):
@@ -136,11 +203,45 @@ def tripleBondCurved(p1, p2, radius, offsetDist, planeNormal = V3(0, 0, 1), plan
     cc3.Placement = pl
     return cc1.fuse([cc2,cc3])
 
+DOC_NAME = "test_molecule"
 
+if FreeCAD.ActiveDocument is None:
+    FreeCAD.newDocument(DOC_NAME)
+    print(f"Document: {DOC_NAME}")
+
+# test if there is an active document with a "proper" name
+if FreeCAD.ActiveDocument.Name == DOC_NAME:
+    print("DOC_NAME exist")
+else:
+    print("DOC_NAME is not active")
+    # test if there is a document with a "proper" name
+    try:
+        FreeCAD.getDocument(DOC_NAME)
+    except NameError:
+        print(f"No Document: {DOC_NAME}")
+        FreeCAD.newDocument(DOC_NAME)
+        print(f"Document Created: {DOC_NAME}")
+  
+DOC = FreeCAD.getDocument(DOC_NAME)
+GUI = FreeCADGui.getDocument(DOC_NAME)
+VIEW = GUI.ActiveView
 
 bondRadius = 0.05
 useCurved = True
 doc = App.ActiveDocument
+
+global filename
+global nameFile
+
+try:
+    filename, filefilter = QtGui.QFileDialog.getOpenFileName(QtGui.qApp.activeWindow(), 'Open a Pointcloud', '*.dat')
+except Exception:
+    param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Macro")# macro path
+    path = param.GetString("MacroPath","") + "/"                        # macro path
+    filename, filefilter = PySide.QtGui.QFileDialog.getOpenFileName(None, "Open a sdf-file", path, "*.dat")
+
+# path and name of links file
+# path = "/home/nemo/Dokumente/Privat/Fredo/Conformer3D_CID_6658.sdf"
 
 zeroVec = V3(0,0,0)
 atomlocs=[] # list of locations 1-based
@@ -148,24 +249,45 @@ atomradii = [] # list of corresponding radii 1-based
 #0 index is dummy data
 atomlocs.append(zeroVec)
 atomradii.append(0.0)
-
-file = open(atomfile, "r")  # open the file read
-for line in file:
-    X1, Y1, Z1, pe = line.split()
-    atomlocs.append(V3(float(X1), float(Y1), float(Z1)))
-    atomradii.append(float(pe))
-
-file.close()
-
-
 linkList = []
-# open the file read
-file = open(linkfile, "r")
+
+file = open(filename, "r")  # open the file read
+i=1
 for line in file:
-    i1, i2, i3 = line.split()
-    linkList.append((int(i1), int(i2), int(i3)))
+    if i > 4:
+      
+#      print(len(line))
+      #len(line) -25)
+      if len(line) == 70:
+       line=line[:-37]
+       X1, Y1, Z1, pe = line.split()
+       pei = periodic_table[pe]
+       print(float(pei))
+       atomradii.append(float(pei)/1000)
+#       print(pe)
+#       if pe is not str:
+#        break
+       atomlocs.append(V3(float(X1), float(Y1), float(Z1)))
+      elif len(line) == 22:
+       line=line[:-12]
+       i1, i2, i3 = line.split()
+       linkList.append((int(i1), int(i2), int(i3)))
+#       print(i1)
+#       if pe is not str:
+#        break
+#       atomlocs.append(V3(float(X1), float(Y1), float(Z1)))
+#       print(pe)
+#       print("a")
+#       print(periodic_table[pe])
+
+    i=i+1
 
 file.close()
+#print(atomlocs)
+#print(linkList)
+
+#added
+i=1
 
 atomCompound = doc.addObject("Part::Compound","Atoms")
 atomlinks = []
@@ -175,6 +297,9 @@ for i, loc in enumerate(atomlocs):
     else:
         sph = doc.addObject("Part::Sphere","Sphere")
         sph.Label = "Atom_" + str(i)
+        print(i)
+#        print(atomradii[i])
+#        print(periodic_table[atomradii[i]])
         sph.Radius= atomradii[i]
         pl = App.Placement()
         pl.Base = loc
@@ -221,5 +346,4 @@ for i, j, bondType in linkList:
 
 
 doc.recompute()
-
 
