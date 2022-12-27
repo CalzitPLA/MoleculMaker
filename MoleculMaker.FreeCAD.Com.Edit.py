@@ -234,11 +234,11 @@ global filename
 global nameFile
 
 try:
-    filename, filefilter = QtGui.QFileDialog.getOpenFileName(QtGui.qApp.activeWindow(), 'Open a Pointcloud', '*.dat')
+    filename, filefilter = QtGui.QFileDialog.getOpenFileName(QtGui.qApp.activeWindow(), 'Open a Pointcloud', '(*.dat *.sdf)')
 except Exception:
     param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Macro")# macro path
     path = param.GetString("MacroPath","") + "/"                        # macro path
-    filename, filefilter = PySide.QtGui.QFileDialog.getOpenFileName(None, "Open a sdf-file", path, "*.dat")
+    filename, filefilter = PySide.QtGui.QFileDialog.getOpenFileName(None, "Open a sdf-file", path, "(*.dat *.sdf)")
 
 # path and name of links file
 # path = "/home/nemo/Dokumente/Privat/Fredo/Conformer3D_CID_6658.sdf"
